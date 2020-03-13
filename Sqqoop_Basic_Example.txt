@@ -1,0 +1,47 @@
+Basic Import Sqoop Commands :
+
+sqoop import --connect jdbc:mysql://localhost/training --username root --password cloudera --table flag --target-dir /InputFiles/Sqoop
+
+sqoop import --connect jdbc:mysql://localhost/training --username root --password cloudera --table flag --hive-import --create-hive-table --hive-table hive_project.flag --m 2
+
+sqoop import -Dmapreduce.job.user.classpath.first=true --connect "jdbc:mysql://localhost/training" --username root --P --table flag --hive-import --create-hive-table --hive-table hive_project.flag_avro --split-by landmass --compression-codec gzip --as-avrodatafile --fields-terminated-by '\001'
+
+sqoop import -Dmapreduce.job.user.classpath.first=true --connect "jdbc:mysql://localhost/training" --username root --P --table flag --hive-import --create-hive-table --hive-table hive_project.flag_avro --split-by landmass --compression-codec gzip
+
+sqoop import --connect "jdbc:mysql://localhost/training" --username root --P --table flag --hive-import --create-hive-table --hive-table hive_project.flag_append --compression-codec gzip --where "landmass = 1 or landmass = 2 or landmass = 3" 
+
+sqoop import --connect "jdbc:mysql://localhost/training" --username root --P --table flag --hive-import --create-hive-table --hive-table hive_project.flag_append --compression-codec gzip --where "landmass = 4 or landmass = 5 or landmass = 6" --append
+
+sqoop import --connect jdbc:mysql://localhost/training --username root --P --table flag 
+
+sqoop import --connect jdbc:mysql://localhost/training --username root --password cloudera --table flag --warehouse-dir /user/hive/warehouse/hive_training.db/ --append
+
+sqoop import --connect jdbc:mysql://localhost/training --username root --password cloudera --table flag --warehouse-dir /user/hive/warehouse/hive_training.db/ --delete-target-dir  --> overwrite
+
+sqoop import --connect jdbc:mysql://localhost/training --username root --password cloudera --table flag --warehouse-dir /user/hive/warehouse/hive_training.db/ --delete-target-dir --as-avrodatafile/--as-sequencefile/--as-parquetfile
+
+sqoop import --connect jdbc:mysql://localhost/training --username root --password cloudera --table flag --warehouse-dir /user/hive/warehouse/hive_training.db/ --delete-target-dir --compress   ---> by deafult , it will be gunzip
+
+sqoop import --connect jdbc:mysql://localhost/training --username root --password cloudera --table flag --warehouse-dir /user/hive/warehouse/hive_training.db/ --delete-target-dir --compress --compression-codec snappy  --> check from the core-site.xml in /etc/hadoop/conf path compression algorithm
+
+sqoop import --connect jdbc:mysql://localhost/training --username root --password cloudera --table flag --columns country,landmass,area,zone --warehouse-dir /user/hive/warehouse/hive_training.db/ --delete-target-dir
+
+sqoop import --connect jdbc:mysql://localhost/training --username root --password cloudera --table flag --warehouse-dir /user/hive/warehouse/hive_training.db/ --delete-target-dir --boundary-query "select 1,194"     --> not worked as expected
+
+sqoop import -connect jdbc:mysql://localhost/training --username root --password cloudera --table flag --warehouse-dir /user/hive/warehouse/hive_training.db/ --delete-target-dir --where "landmass IN(1,2,3) and population <= 1" 
+
+sqoop import --connect jdbc:mysql://localhost/training --username root --password cloudera --table flag --warehouse-dir /user/hive/warehouse/hive_training.db/ --delete-target-dir --split-by country
+
+
+
+Basic Sqoop Eval commands :
+
+sqoop eval --connect jdbc:mysql://localhost/training --username root --password cloudera --query "select * from flag limit 10"
+
+sqoop eval --connect jdbc:mysql://localhost/training --username root --password cloudera --query "select * from flag limit 10"  1> query.out 2>query.err
+
+
+
+Basic Sqoop Export Command :
+
+sqoop export --connect jdbc:mysql://localhost/training --username root --password cloudera --table flag --export-dir /user/hive/warehouse/hive_project.db/flag --m 2 --input-fields-terminated-by "\001"
