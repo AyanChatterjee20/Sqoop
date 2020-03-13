@@ -1,0 +1,99 @@
+Sqoop Command for Import : 
+
+sqoop import --connect jdbc:mysql://localhost/training --username root --password cloudera --table flag --warehouse-dir /user/hive/warehouse/hive_training.db/ --delete-target-dir  --> overwrite
+
+sqoop import --connect jdbc:mysql://localhost/training --username root --password cloudera --table flag --warehouse-dir /user/hive/warehouse/hive_training.db/ --delete-target-dir --as-avrodatafile/--as-sequencefile/--as-parquetfile
+
+sqoop import --connect jdbc:mysql://localhost/training --username root --password cloudera --table flag --warehouse-dir /user/hive/warehouse/hive_training.db/ --delete-target-dir --compress   ---> by deafult , it will be gunzip
+
+sqoop import --connect jdbc:mysql://localhost/training --username root --password cloudera --table flag --warehouse-dir /user/hive/warehouse/hive_training.db/ --delete-target-dir --compress --compression-codec snappy  --> check from the core-site.xml in /etc/hadoop/conf path compression algorithm
+
+sqoop import --connect jdbc:mysql://localhost/training --username root --password cloudera --table flag --columns country,landmass,area,zone --warehouse-dir /user/hive/warehouse/hive_training.db/ --delete-target-dir
+
+sqoop import --connect jdbc:mysql://localhost/training --username root --password cloudera --table flag --warehouse-dir /user/hive/warehouse/hive_training.db/ --delete-target-dir --boundary-query "select 1,194"     --> not worked as expected
+
+sqoop import -connect jdbc:mysql://localhost/training --username root --password cloudera --table flag --warehouse-dir /user/hive/warehouse/hive_training.db/ --delete-target-dir --where "landmass IN(1,2,3) and population <= 1" 
+
+sqoop import --connect jdbc:mysql://localhost/training --username root --password cloudera --table flag --warehouse-dir /user/hive/warehouse/hive_training.db/ --delete-target-dir --split-by country
+
+sqoop import --connect jdbc:mysql://localhost/training --username root --password cloudera --query "select landmass,count(country) from flag where \$CONDITIONS group by landmass" --target-dir /user/hive/warehouse/hive_training.db/flag/ --delete-target-dir --num-mappers 1      --> need to specify target dir as table not specified to create directory, split by or num mappers as table not specify to fetch primary key, need to specify where clause with $CONDITIONS
+
+sqoop import -Dorg.apache.sqoop.splitter.allow_text_splitter=true --connect jdbc:mysql://localhost/training --username root --password cloudera --table flag --warehouse-dir /user/hive/warehouse/hive_training.db/ --delete-target-dir   --> for non-numeric pk field
+
+sqoop import --connect jdbc:mysql://localhost/training --username root --password cloudera --table flag --warehouse-dir /user/hive/warehouse/hive_training.db/ --delete-target-dir --fields-terminated-by '|' --lines-terminated-by ':' 
+
+sqoop import --connect jdbc:mysql://localhost/training --username root --password cloudera --table flag --warehouse-dir /user/hive/warehouse/hive_training.db/ --delete-target-dir --null-non-string '-1'  --> NULL value in table will be replaced with -1 in hdfs
+
+sqoop import-all-tables --connect jdbc:mysql://localhost/training --username root --password cloudera --warehouse-dir /user/hive/warehouse/hive_training.db/ --autoreset-to-one-mapper --num-mappers 2 
+
+create empty hive table :
+sqoop create-hive-table --connect jdbc:mysql://localhost/retail_db --username root --password cloudera --table orders --hive-database retail_db
+
+Load data in Hive Table and same way data appended :
+sqoop import --connect jdbc:mysql://localhost/retail_db --username root --password cloudera --table orders --hive-import --hive-database retail_db
+
+Overwrite and load data in existsing table :
+sqoop import --connect jdbc:mysql://localhost/retail_db --username root --password cloudera --table orders --hive-import --hive-database retail_db --hive-overwrite
+
+Generating Logs :
+sqoop import --connect jdbc:mysql://localhost/retail_db --username root --password cloudera --table orders --hive-import --hive-database retail_db --hive-overwrite --verbose 2>sqoopimport.err 1>sqoopimport.out 
+
+sqoop import --connect jdbc:mysql://localhost/retail_db --username root --password cloudera --table order_items --hive-import --hive-database retail_db --as-parquetfile
+
+
+
+Import all tables : 
+
+sqoop import-all-tables --connect jdbc:mysql://localhost/retail_db --username root --password cloudera  --hive-import --hive-database retail_db --hive-overwrite --autoreset-to-one-mapper
+
+
+
+Sqoop Export command :
+
+sqoop export --connect jdbc:mysql://localhost/training --username root --password cloudera --export-dir /user/hive/warehouse/retail_db.db/daily_revenue --table training_daily_revenue
+
+UPDATE export table in mysql based on PK :
+sqoop export --connect jdbc:mysql://localhost/training --username root --password cloudera --export-dir /user/hive/warehouse/retail_db.db/daily_revenue --table training_daily_revenue --update-key order_date
+
+Update the target table based on the PK with update mode :
+first do :
+delete from training_daily_revenue where order_date > '2013-12-31 00:00:00.0';
+update training_daily_revenue set revenue = 0;    --> for manipulating the data
+
+sqoop export --connect jdbc:mysql://localhost/training --username root --password cloudera --export-dir /user/hive/warehouse/retail_db.db/daily_revenue --table training_daily_revenue --update-key order_date --update-mode allowinsert
+ -- update-key and update-mode working properly in mysql 
+
+For mismatch of column to target and source need to specify the columns in order the source data have in hdfs :
+sqoop export --connect jdbc:mysql://localhost/training --username root --password cloudera --export-dir /user/hive/warehouse/retail_db.db/daily_revenue --table training_daily_revenue --columns order_date,revenue
+
+For different input fields delimeter in hdfs , we need to specify that during export :
+sqoop export --connect jdbc:mysql://localhost/training --username root --password cloudera --export-dir /user/hive/warehouse/retail_db.db/daily_revenue01 --table training_daily_revenue --columns order_date,revenue --input-fields-terminated-by '\001'
+
+For using staging table from hampering the original table partial load in export, we need to clear or rectify the dublicate data in target table
+ as "Staging table cannot be used when export is running in update mode." : 
+sqoop export --connect jdbc:mysql://localhost/training --username root --password cloudera --export-dir /user/hive/warehouse/retail_db.db/daily_revenue --table training_daily_revenue --columns order_date,revenue --staging-table training_daily_revenue_stage --clear-staging-table 
+
+
+
+SQOOP JOB :
+
+Creating Sqoop job :
+sqoop job --create import_orders -- import --connect jdbc:mysql://localhost/retail_db --username root --password cloudera --table orders --warehouse-dir /user/hive/warehouse/retail_db.db/ --delete-target-dir
+
+sqoop job --list
+
+sqoop job --show import_orders
+
+sqoop job --exec import_orders
+
+Incremental import through sqoop job : check-column/incremental/last-value
+sqoop import --connect jdbc:mysql://localhost/retail_db --username root --password cloudera --table orders --warehouse-dir /user/hive/warehouse/retail_db.db/
+ --check-column order_id --incremental append --last-value 68883
+
+SQOOP JOB FOR INCREMENTAL LOAD : 
+sqoop job --create import_orders_incr -- import --connect jdbc:mysql://localhost/training --username root --password cloudera --table training_orders_incr --warehouse-dir /user/hive/warehouse/retail_db.db/ 
+--check-column order_id --incremental append --last-value 0
+
+Another argument of incremental load : lastmodified (generally it works on lastmodified date or last updated date, each time last-value is updated with run time system date )
+sqoop import --connect jdbc:mysql://localhost/retail_db --username root --password cloudera --table training_orders_incr --warehouse-dir /user/hive/warehouse/retail_db.db/ --check-column orders_date 
+--incremental lastmodified --last-value "2013-07-24 00:00:00.0"
